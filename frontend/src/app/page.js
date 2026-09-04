@@ -40,11 +40,17 @@ export default function DashboardPage() {
   const [stepIndex, setStepIndex] = useState(0);
 
   // ─── Simulation & On-Chain State ───────────────────────────────────────
-  const [swaps, setSwaps] = useState([]);
+  const [onChainSwaps, setOnChainSwaps] = useState([]);
+  const [simSwaps, setSimSwaps] = useState([]);
   const [flowState, setFlowState] = useState(createFlowState());
   const [flowStateB, setFlowStateB] = useState(createFlowState()); // for multi-pool
-  const [debtHistory, setDebtHistory] = useState([]);
+  const [simDebtHistory, setSimDebtHistory] = useState([]);
+  const [onChainDebtHistory, setOnChainDebtHistory] = useState([]);
   const [selectedSwapIdx, setSelectedSwapIdx] = useState(0);
+
+  // Active dataset strictly bound to active tab
+  const swaps = activeTab === 'onchain' ? onChainSwaps : simSwaps;
+  const debtHistory = activeTab === 'onchain' ? onChainDebtHistory : simDebtHistory;
 
   // Restore on-chain swaps from localStorage on load
   useEffect(() => {
@@ -53,7 +59,7 @@ export default function DashboardPage() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setSwaps(parsed);
+          setOnChainSwaps(parsed);
         }
       }
     } catch (e) {}
@@ -109,7 +115,7 @@ export default function DashboardPage() {
             };
           }).reverse();
 
-          setSwaps(prev => {
+          setOnChainSwaps(prev => {
             const existingHashes = new Set(parsedSwaps.map(s => s.txHash));
             const localOnly = prev.filter(s => !existingHashes.has(s.txHash));
             const combined = [...localOnly, ...parsedSwaps];
@@ -127,17 +133,17 @@ export default function DashboardPage() {
     fetchOnChainHistory();
   }, [publicClient]);
 
-  // Persist swaps to localStorage whenever updated
+  // Persist on-chain swaps to localStorage whenever updated
   useEffect(() => {
     try {
-      if (swaps.length > 0) {
-        localStorage.setItem('fairflow_swaps_v2', JSON.stringify(swaps));
+      if (onChainSwaps.length > 0) {
+        localStorage.setItem('fairflow_swaps_v2', JSON.stringify(onChainSwaps));
       }
     } catch (e) {}
-  }, [swaps]);
+  }, [onChainSwaps]);
 
   const handleOnChainSwap = useCallback((newSwap) => {
-    setSwaps(prev => {
+    setOnChainSwaps(prev => {
       const updated = [newSwap, ...prev.filter(s => s.txHash !== newSwap.txHash)];
       try {
         localStorage.setItem('fairflow_swaps_v2', JSON.stringify(updated));
@@ -145,7 +151,7 @@ export default function DashboardPage() {
       return updated;
     });
     setSelectedSwapIdx(0);
-    setDebtHistory(prev => [
+    setOnChainDebtHistory(prev => [
       ...prev.slice(-29),
       {
         block: newSwap.block,
@@ -166,16 +172,16 @@ export default function DashboardPage() {
   const stateBRef = useRef(flowStateB);
   const blockRef = useRef(currentBlock);
   const stepRef = useRef(stepIndex);
-  const swapsRef = useRef(swaps);
-  const debtHistoryRef = useRef(debtHistory);
+  const simSwapsRef = useRef(simSwaps);
+  const simDebtHistoryRef = useRef(simDebtHistory);
 
   // Keep refs in sync
   useEffect(() => { stateRef.current = flowState; }, [flowState]);
   useEffect(() => { stateBRef.current = flowStateB; }, [flowStateB]);
   useEffect(() => { blockRef.current = currentBlock; }, [currentBlock]);
   useEffect(() => { stepRef.current = stepIndex; }, [stepIndex]);
-  useEffect(() => { swapsRef.current = swaps; }, [swaps]);
-  useEffect(() => { debtHistoryRef.current = debtHistory; }, [debtHistory]);
+  useEffect(() => { simSwapsRef.current = simSwaps; }, [simSwaps]);
+  useEffect(() => { simDebtHistoryRef.current = simDebtHistory; }, [simDebtHistory]);
 
   // ─── Execute one swap step ────────────────────────────────────────────
   const executeStep = useCallback(() => {
@@ -228,20 +234,20 @@ export default function DashboardPage() {
       stateAfter: result.stateAfter,
     };
 
-    const newSwaps = [...swapsRef.current, swapRecord];
-    setSwaps(newSwaps);
-    swapsRef.current = newSwaps;
+    const newSwaps = [...simSwapsRef.current, swapRecord];
+    setSimSwaps(newSwaps);
+    simSwapsRef.current = newSwaps;
     setSelectedSwapIdx(newSwaps.length - 1);
 
-    // Update debt history (use primary pool)
+    // Update debt history for simulation (use primary pool)
     if (!isPoolB) {
-      const newHistory = [...debtHistoryRef.current, {
+      const newHistory = [...simDebtHistoryRef.current, {
         blockDebt: state.blockDebt,
         matureDebt: state.matureDebt,
         volatilityEma: state.volatilityEma,
       }];
-      setDebtHistory(newHistory);
-      debtHistoryRef.current = newHistory;
+      setSimDebtHistory(newHistory);
+      simDebtHistoryRef.current = newHistory;
     }
 
     setStepIndex(idx + 1);
@@ -283,10 +289,10 @@ export default function DashboardPage() {
     blockRef.current = 1;
     setStepIndex(0);
     stepRef.current = 0;
-    setSwaps([]);
-    swapsRef.current = [];
-    setDebtHistory([]);
-    debtHistoryRef.current = [];
+    setSimSwaps([]);
+    simSwapsRef.current = [];
+    setSimDebtHistory([]);
+    simDebtHistoryRef.current = [];
     setSelectedSwapIdx(null);
   }, []);
 
