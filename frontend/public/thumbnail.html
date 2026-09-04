@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>FairFlow Project Thumbnail</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: #07090E;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .thumb-wrapper {
+      width: 100%;
+      height: 100%;
+      max-width: 100vw;
+      max-height: 56.25vw; /* 16:9 ratio */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="thumb-wrapper">
+    <img src="/thumbnail.svg" alt="FairFlow Thumbnail" />
+  </div>
+</body>
+</html>
